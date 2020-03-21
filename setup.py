@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='wkf-kata-machine-learning',
+    name='wkf_kata_machine_learning',
     version='0.0.1',
     install_requires=[
         'pytest'

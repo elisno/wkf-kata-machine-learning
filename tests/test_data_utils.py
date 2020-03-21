@@ -1,4 +1,4 @@
-from data_mining.data_utils import category_data, get_rounds_urls
+from wkf_kata_machine_learning.data_utils import category_data, get_rounds_urls
 
 
 def test_category_data():
