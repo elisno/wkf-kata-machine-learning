@@ -4,6 +4,21 @@ from bs4 import BeautifulSoup
 
 
 def category_data(category_url):
+
+    """Collect basic information on draws for a category/round in a WKF event
+
+    Args:
+    category_url (str): url of the draws for the given gategory
+
+    Yields:
+    (tuple): tuple containing:
+
+        tables (bs4.element.ResultSet): HTML tables for each pool in the category
+        tournament (str): The WKF event in the draws page header
+        category (str): The category (round + group) in the draws page header
+
+   """
+
     # make http request to the site
     page = requests.get(category_url)
     # parse the html content
@@ -18,6 +33,32 @@ def category_data(category_url):
 
 
 def get_round_performances(url):
+
+    """Get round data from tables and save them in a dictionary
+
+    Args:
+    url (str):  url of the draws for the given gategory
+        (identical to the argument in category_data(category_url))
+
+    Yields:
+    data (list[dict]):  List of athlete performances in a given round,
+        each entry stored as a dict. For example:
+
+        {'Tournament': "<Name of Competition> - <Location> <Date>",
+         'Category': 'Male/Female Kata RX-GY'               # Useful for later rounds
+         'Pool': '<Pool Number> / <Number of Pools>',       # Useful for first round
+         'Name': '<Name of Competitor>',
+         'Nationality': '<Country in abbr. in Alpha-3>',    # E.g. "JPN" or "ESP"
+         'Kata': '<Kata number> <Kata Name>',               # E.g. "002 Anan Dai"
+         'TEC1': <Technical Score from Judge 1>,            # Should have 7 scores
+         ...,
+         'ATH1': <Athletic Score from Judge 1>,             # Should have 7 scores
+         ...,
+         'Score': <Weighted Score>                          # Used for athlete ranking withing pool/group
+         }
+
+    """
+
     tables, tournament, category = category_data(url)
 
     # Collect kata performance data for each competitor in the round
@@ -48,8 +89,6 @@ def get_round_performances(url):
                 athletic_grades = [float(i.replace(',', '.')) for i in athletic_grades]
 
 
-
-
                 perf_data = {'Tournament':tournament,
                         'Category':category,
                         'Pool':pool,
@@ -71,6 +110,15 @@ def get_round_performances(url):
 
 def get_rounds_urls(draws_url):
 
+    """Collects urls to be used by get_round_performances(url) for a given WKF event
+
+    Args:
+    draws_url (str): Page url that links to all categories (kata + kumite) for the WKF event
+
+    Yields:
+    urls (list[str]): A list of urls for draws in kata categories in a WKF event.
+
+    """
     page = requests.get(draws_url)
     soup = BeautifulSoup(page.content, 'html.parser')
     datalink2s = soup.find_all("a",{"class": "datalink2"})[:-3]
@@ -82,6 +130,17 @@ def get_rounds_urls(draws_url):
 
 
 def get_performances(draws_url):
+
+    """Goes through all kata categories and concatenates all athlete performances in a Pandas DataFrame
+
+    Args:
+    draws_url (str): Page url that links to all categories (kata + kumite) for the WKF event
+
+    Yields:
+    (pandas.core.frame.DataFrame): A DataFrame of all athlete kata performances for the WKF event
+
+    """
+
     urls = get_rounds_urls(draws_url)
 
     # Make DataFrame from each category / round
@@ -91,6 +150,18 @@ def get_performances(draws_url):
     return pd.concat(data_rounds)
 
 def concat_tournaments(filename):
+    """Collect kata performances list of draws urls for multiple WKF events
+
+    Args:
+    filename (str): Name of a file containing all urls for event draws
+
+    Yields:
+    df (pandas.core.frame.DataFrame): A DataFrame containing all
+        kata performances from WKF events specified in `filename`
+
+    Results from this method are typically stored in a file, e.g. `filename.csv`
+    """
+
     f  = open(filename,"r")
     draws_urls = f.read().splitlines()
     f.close()
